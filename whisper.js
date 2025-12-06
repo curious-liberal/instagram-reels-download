@@ -421,13 +421,15 @@
 
       <div class="transcript-text">
         <h3><i class="fas fa-align-left"></i> Transcript</h3>
-        <div class="transcript-content">${escapeHtml(result.text)}</div>
+        <div class="transcript-content-wrapper">
+          <div class="transcript-content">${escapeHtml(result.text)}</div>
+          <button class="copy-transcript-btn" onclick="WhisperAPI.copyTranscript()" title="Copy to clipboard">
+            <i class="fas fa-copy"></i>
+          </button>
+        </div>
       </div>
 
       <div class="transcript-actions">
-        <button class="download-btn" onclick="WhisperAPI.copyTranscript()">
-          <i class="fas fa-copy"></i> Copy to Clipboard
-        </button>
         <button class="download-btn" onclick="WhisperAPI.downloadTranscript('txt')">
           <i class="fas fa-file-alt"></i> Download TXT
         </button>
@@ -471,13 +473,17 @@
     if (!result) return;
 
     navigator.clipboard.writeText(result.text).then(() => {
-      // Show brief success message
-      const btn = event.target.closest('button');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-      setTimeout(() => {
-        btn.innerHTML = originalText;
-      }, 2000);
+      // Show brief success message on all copy buttons
+      const copyBtns = document.querySelectorAll('.copy-transcript-btn');
+      copyBtns.forEach(btn => {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+          btn.classList.remove('copied');
+        }, 2000);
+      });
     }).catch(err => {
       console.error('Failed to copy:', err);
       alert('Failed to copy to clipboard');

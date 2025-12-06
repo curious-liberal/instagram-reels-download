@@ -514,17 +514,46 @@
   color: var(--primary);
 }
 
+.transcript-content-wrapper {
+  position: relative;
+}
+
 .transcript-content {
   background: white;
   border: 1px solid #eee;
   border-radius: 8px;
   padding: 1.5rem;
+  padding-top: 2.5rem;
   max-height: 400px;
   overflow-y: auto;
   line-height: 1.8;
   color: var(--text-dark);
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+.copy-transcript-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.copy-transcript-btn:hover {
+  background: var(--secondary);
+  transform: scale(1.05);
+}
+
+.copy-transcript-btn.copied {
+  background: #52c41a;
 }
 
 .transcript-content::-webkit-scrollbar {
