@@ -25,18 +25,22 @@
     showProgress('Loading audio extraction library...');
 
     try {
-      // FFmpeg should be loaded from CDN in index.html
-      if (typeof FFmpeg === 'undefined') {
-        throw new Error('FFmpeg library not loaded. Please refresh the page.');
+      // Check if FFmpeg libraries are loaded
+      if (typeof FFmpegWASM === 'undefined') {
+        throw new Error('FFmpeg library not loaded from CDN. Please refresh the page.');
       }
 
-      const { FFmpeg } = window.FFmpegWASM;
-      const { toBlobURL } = window.FFmpegUtil;
+      if (typeof FFmpegUtil === 'undefined') {
+        throw new Error('FFmpeg util library not loaded from CDN. Please refresh the page.');
+      }
+
+      const { FFmpeg } = FFmpegWASM;
+      const { fetchFile, toBlobURL } = FFmpegUtil;
 
       ffmpegInstance = new FFmpeg();
 
       // Load FFmpeg core
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
       await ffmpegInstance.load({
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
         wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
