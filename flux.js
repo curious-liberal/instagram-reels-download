@@ -52,23 +52,4 @@
     });
   }
 
-const footerDate = document.getElementById('footerDate');
-
-  function updateFooterDate() {
-    const now = new Date();
-    
-    const options = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
-    };
-    
-    footerDate.textContent = now.toLocaleString('en-US', options);
-  }
-
-  updateFooterDate();  
-  setInterval(updateFooterDate, 1000);
+// Footer date removed per user request
