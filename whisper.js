@@ -60,10 +60,28 @@
         throw new Error('Failed to play video for audio extraction. Please try again.');
       }
 
-      // Wait for video to finish
-      await new Promise((resolve) => {
+      // Update progress as video plays
+      const progressInterval = setInterval(() => {
+        if (video.duration > 0) {
+          const progress = Math.floor((video.currentTime / video.duration) * 100);
+          if (progressCallback) {
+            progressCallback(progress);
+          }
+        }
+      }, 500);
+
+      // Wait for video to finish (with 5 minute timeout)
+      await new Promise((resolve, reject) => {
         video.onended = resolve;
+        video.onerror = () => reject(new Error('Video playback error during extraction'));
+
+        // Timeout after 5 minutes
+        setTimeout(() => {
+          reject(new Error('Audio extraction timed out. Video may be too long.'));
+        }, 5 * 60 * 1000);
       });
+
+      clearInterval(progressInterval);
 
       // Stop recording
       mediaRecorder.stop();
