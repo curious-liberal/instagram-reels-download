@@ -15,15 +15,23 @@
                 <h1>InstaScribe</h1>
             </div>
             <div class="header-actions">
-                <div id="apiKeyStatus" class="api-key-status not-configured">
-                    <i class="fas fa-exclamation-circle"></i> No API Key
+                <div class="header-action-buttons">
+                    <button id="apiKeyStatus" class="header-link-btn api-key-status not-configured" type="button">
+                        <i class="fas fa-exclamation-circle"></i> No API key
+                    </button>
+                    <a class="header-link-btn" href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">
+                        <i class="fas fa-key"></i> Get an API key
+                    </a>
+                    <a class="header-link-btn" href="https://github.com/curious-liberal/instagram-reels-download" target="_blank" rel="noopener">
+                        <i class="fab fa-github"></i> Source
+                    </a>
+                    <button id="settingsButton" class="header-link-btn" type="button" title="Settings">
+                        <i class="fas fa-cog"></i> Settings
+                    </button>
                 </div>
-                <button id="settingsButton" class="icon-btn header-icon-btn" title="Settings">
-                    <i class="fas fa-cog"></i>
-                </button>
             </div>
         </div>
-        <p class="tagline">Download Instagram videos in high quality with one click</p>
+        <p class="tagline">Download and transcribe Instagram Reels—everything stays in your browser</p>
     </header>
     
     <main>

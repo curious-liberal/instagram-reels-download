@@ -16,7 +16,7 @@
   // Initialize settings modal when DOM is ready
   function initSettings() {
     // Get DOM elements
-    settingsBtn = document.getElementById('settingsButton');
+    settingsBtn = document.getElementById('settingsButton') || document.getElementById('apiKeyStatus');
     settingsModal = document.getElementById('settingsModal');
     closeSettingsBtn = document.getElementById('closeSettings');
     apiKeyInput = document.getElementById('apiKeyInput');
@@ -30,6 +30,9 @@
     // Event listeners
     if (settingsBtn) {
       settingsBtn.addEventListener('click', openSettingsModal);
+    }
+    if (apiKeyStatus) {
+      apiKeyStatus.addEventListener('click', openSettingsModal);
     }
 
     if (closeSettingsBtn) {
@@ -156,10 +159,10 @@
     const apiKey = getApiKey();
     if (apiKeyStatus) {
       if (apiKey) {
-        apiKeyStatus.innerHTML = '<i class="fas fa-check-circle"></i> API Key Configured';
+        apiKeyStatus.innerHTML = '<i class="fas fa-check-circle"></i> API key saved';
         apiKeyStatus.className = 'api-key-status configured';
       } else {
-        apiKeyStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> No API Key';
+        apiKeyStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> No API key';
         apiKeyStatus.className = 'api-key-status not-configured';
       }
     }
