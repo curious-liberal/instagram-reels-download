@@ -151,9 +151,18 @@
                     <div id="bulkQueue"></div>
 
                     <div id="bulkDownloadSection" style="display: none;">
-                        <button id="downloadAllButton" class="btn">
-                            <i class="fas fa-download"></i> Download All Transcripts (ZIP)
-                        </button>
+                        <h3>Bulk Actions</h3>
+                        <div class="bulk-download-actions">
+                            <button onclick="BulkTranscribe.copyAll()" class="btn">
+                                <i class="fas fa-copy"></i> Copy All Transcripts
+                            </button>
+                            <button onclick="BulkTranscribe.downloadAll()" class="btn">
+                                <i class="fas fa-file-download"></i> Download All (TXT + SRT)
+                            </button>
+                            <button onclick="BulkTranscribe.downloadZip()" class="btn btn-secondary">
+                                <i class="fas fa-file-archive"></i> Download as ZIP
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

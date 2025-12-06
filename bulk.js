@@ -15,7 +15,6 @@
   let bulkQueueSection;
   let bulkQueue;
   let bulkDownloadSection;
-  let downloadAllButton;
   let bulkResponse;
 
   // Initialize bulk module
@@ -26,7 +25,6 @@
     bulkQueueSection = document.getElementById('bulkQueueSection');
     bulkQueue = document.getElementById('bulkQueue');
     bulkDownloadSection = document.getElementById('bulkDownloadSection');
-    downloadAllButton = document.getElementById('downloadAllButton');
     bulkResponse = document.getElementById('bulkResponse');
 
     // Event listeners
@@ -36,10 +34,6 @@
 
     if (clearBulkButton) {
       clearBulkButton.addEventListener('click', handleClear);
-    }
-
-    if (downloadAllButton) {
-      downloadAllButton.addEventListener('click', handleDownloadAll);
     }
 
     // URL cleaning on input
@@ -206,7 +200,7 @@
     if (!bulkQueue) return;
 
     const html = processingQueue.map((item, index) => {
-      let statusIcon, statusClass, statusText;
+      let statusIcon, statusClass, statusText, actions = '';
 
       switch (item.status) {
         case 'pending':
@@ -223,6 +217,22 @@
           statusIcon = 'fa-check-circle';
           statusClass = 'status-completed';
           statusText = 'Completed';
+          actions = `
+            <div class="queue-item-actions">
+              <button class="queue-action-btn" onclick="BulkTranscribe.copyItem(${index})" title="Copy transcript">
+                <i class="fas fa-copy"></i>
+              </button>
+              <button class="queue-action-btn" onclick="BulkTranscribe.downloadTxt(${index})" title="Download TXT">
+                <i class="fas fa-file-alt"></i>
+              </button>
+              <button class="queue-action-btn" onclick="BulkTranscribe.downloadSrt(${index})" title="Download SRT">
+                <i class="fas fa-closed-captioning"></i>
+              </button>
+              <button class="queue-action-btn" onclick="BulkTranscribe.downloadReel(${index})" title="Download video">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          `;
           break;
         case 'failed':
           statusIcon = 'fa-times-circle';
@@ -238,6 +248,7 @@
           <div class="queue-item-status">
             <i class="fas ${statusIcon}"></i> ${statusText}
           </div>
+          ${actions}
         </div>
       `;
     }).join('');
@@ -245,8 +256,145 @@
     bulkQueue.innerHTML = html;
   }
 
-  // Handle download all button
-  async function handleDownloadAll() {
+  // Copy individual item
+  function copyItem(index) {
+    const item = processingQueue[index];
+    if (!item || !item.result) return;
+
+    const formattedText = `=== Instagram Reel Transcript #${index + 1} ===\nURL: ${item.url}\n\n${item.result.text}`;
+
+    navigator.clipboard.writeText(formattedText).then(() => {
+      showMessage('success', 'Transcript copied to clipboard!');
+    }).catch(err => {
+      console.error('Copy failed:', err);
+      showMessage('error', 'Failed to copy to clipboard');
+    });
+  }
+
+  // Download TXT for individual item
+  function downloadTxt(index) {
+    const item = processingQueue[index];
+    if (!item || !item.result) return;
+
+    const blob = new Blob([item.result.text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${item.result.filename}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Download SRT for individual item
+  function downloadSrt(index) {
+    const item = processingQueue[index];
+    if (!item || !item.result || !item.result.srt) return;
+
+    const blob = new Blob([item.result.srt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${item.result.filename}.srt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Download video for individual item
+  async function downloadReel(index) {
+    const item = processingQueue[index];
+    if (!item || !item.url) return;
+
+    try {
+      showMessage('info', 'Fetching video...');
+
+      // Re-fetch the video URL if needed
+      const response = await fetch('https://api.instasave.website/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({'url': item.url})
+      });
+
+      const responseText = await response.text();
+      let videoUrl;
+
+      try {
+        videoUrl = JSON.parse(responseText).download_url;
+      } catch (e) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(responseText, 'text/html');
+        videoUrl = doc.querySelector('a.abutton.is-success')?.getAttribute('href');
+      }
+
+      if (!videoUrl) throw new Error('Could not get video URL');
+
+      // Create download link
+      const a = document.createElement('a');
+      a.href = videoUrl;
+      a.download = `instagram_video_${index + 1}.mp4`;
+      a.click();
+
+      showMessage('success', 'Video download started!');
+    } catch (error) {
+      console.error('Download error:', error);
+      showMessage('error', 'Failed to download video');
+    }
+  }
+
+  // Copy all transcripts in structured format
+  function copyAllTranscripts() {
+    if (completedTranscripts.length === 0) return;
+
+    const formatted = completedTranscripts.map((t, i) => {
+      return `${'='.repeat(60)}\nTRANSCRIPT #${i + 1}\nURL: ${t.url}\n${'='.repeat(60)}\n\n${t.text}\n\n`;
+    }).join('\n');
+
+    navigator.clipboard.writeText(formatted).then(() => {
+      showMessage('success', `Copied ${completedTranscripts.length} transcripts to clipboard!`);
+    }).catch(err => {
+      console.error('Copy failed:', err);
+      showMessage('error', 'Failed to copy to clipboard');
+    });
+  }
+
+  // Download all transcripts as individual files
+  async function downloadAllIndividual() {
+    if (completedTranscripts.length === 0) return;
+
+    showMessage('info', 'Downloading individual TXT + SRT files...');
+
+    // Download each transcript with a small delay
+    for (let i = 0; i < completedTranscripts.length; i++) {
+      const t = completedTranscripts[i];
+
+      // Download TXT
+      const blob = new Blob([t.text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${t.filename}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Download SRT
+      if (t.srt) {
+        const srtBlob = new Blob([t.srt], { type: 'text/plain' });
+        const srtUrl = URL.createObjectURL(srtBlob);
+        const srtLink = document.createElement('a');
+        srtLink.href = srtUrl;
+        srtLink.download = `${t.filename}.srt`;
+        srtLink.click();
+        URL.revokeObjectURL(srtUrl);
+      }
+
+      // Small delay to prevent browser blocking multiple downloads
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    showMessage('success', `Downloaded ${completedTranscripts.length} transcript sets!`);
+  }
+
+  // Download all as ZIP
+  async function downloadAllZip() {
     if (completedTranscripts.length === 0) return;
 
     try {
@@ -299,6 +447,10 @@
       bulkQueueSection.style.display = 'none';
     }
 
+    if (bulkDownloadSection) {
+      bulkDownloadSection.style.display = 'none';
+    }
+
     if (bulkResponse) {
       bulkResponse.innerHTML = '';
     }
@@ -314,6 +466,17 @@
                      type === 'success' ? 'success-message' : 'info-message';
     bulkResponse.innerHTML = `<div class="${className}">${message}</div>`;
   }
+
+  // Public API
+  window.BulkTranscribe = {
+    copyItem: copyItem,
+    downloadTxt: downloadTxt,
+    downloadSrt: downloadSrt,
+    downloadReel: downloadReel,
+    copyAll: copyAllTranscripts,
+    downloadAll: downloadAllIndividual,
+    downloadZip: downloadAllZip
+  };
 
   // Initialize on DOM ready
   if (document.readyState === 'loading') {
