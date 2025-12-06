@@ -356,44 +356,7 @@
     });
   }
 
-  // Download all transcripts as individual files
-  async function downloadAllIndividual() {
-    if (completedTranscripts.length === 0) return;
-
-    showMessage('info', 'Downloading individual TXT + SRT files...');
-
-    // Download each transcript with a small delay
-    for (let i = 0; i < completedTranscripts.length; i++) {
-      const t = completedTranscripts[i];
-
-      // Download TXT
-      const blob = new Blob([t.text], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${t.filename}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      // Download SRT
-      if (t.srt) {
-        const srtBlob = new Blob([t.srt], { type: 'text/plain' });
-        const srtUrl = URL.createObjectURL(srtBlob);
-        const srtLink = document.createElement('a');
-        srtLink.href = srtUrl;
-        srtLink.download = `${t.filename}.srt`;
-        srtLink.click();
-        URL.revokeObjectURL(srtUrl);
-      }
-
-      // Small delay to prevent browser blocking multiple downloads
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-
-    showMessage('success', `Downloaded ${completedTranscripts.length} transcript sets!`);
-  }
-
-  // Download all as ZIP
+  // Download all transcripts as ZIP (TXT + SRT)
   async function downloadAllZip() {
     if (completedTranscripts.length === 0) return;
 
@@ -429,6 +392,68 @@
     } catch (error) {
       console.error('ZIP generation error:', error);
       showMessage('error', 'Failed to generate ZIP file');
+    }
+  }
+
+  // Download all videos as ZIP
+  async function downloadAllVideosZip() {
+    if (processingQueue.length === 0) return;
+
+    try {
+      const zip = new JSZip();
+
+      for (let i = 0; i < processingQueue.length; i++) {
+        const item = processingQueue[i];
+        if (item.status !== 'completed') continue;
+
+        // Get fresh download URL
+        const response = await fetch('https://api.instasave.website/media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({'url': item.url})
+        });
+
+        const responseText = await response.text();
+        let videoUrl;
+
+        try {
+          videoUrl = JSON.parse(responseText).download_url;
+        } catch (e) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(responseText, 'text/html');
+          videoUrl = doc.querySelector('a.abutton.is-success')?.getAttribute('href');
+        }
+
+        if (!videoUrl) {
+          console.warn('Skipping video download for item: ', item.url);
+          continue;
+        }
+
+        const videoResp = await fetch(videoUrl);
+        if (!videoResp.ok) {
+          console.warn('Failed to fetch video for zip: ', item.url);
+          continue;
+        }
+        const blob = await videoResp.blob();
+
+        const filename = `instagram_video_${i + 1}.mp4`;
+        zip.file(filename, blob);
+      }
+
+      showMessage('info', 'Generating video ZIP file...');
+      const blob = await zip.generateAsync({ type: 'blob' });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `instagram_videos_${Date.now()}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      showMessage('success', 'Video ZIP download started!');
+    } catch (error) {
+      console.error('Video ZIP error:', error);
+      showMessage('error', 'Failed to generate video ZIP');
     }
   }
 
@@ -474,8 +499,8 @@
     downloadSrt: downloadSrt,
     downloadReel: downloadReel,
     copyAll: copyAllTranscripts,
-    downloadAll: downloadAllIndividual,
-    downloadZip: downloadAllZip
+    downloadZip: downloadAllZip,
+    downloadVideosZip: downloadAllVideosZip
   };
 
   // Initialize on DOM ready
