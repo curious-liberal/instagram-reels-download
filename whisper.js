@@ -16,130 +16,79 @@
 
   // ==================== AUDIO EXTRACTION ====================
 
-  // Load FFmpeg.wasm library
-  async function loadFFmpeg() {
-    if (ffmpegLoaded && ffmpegInstance) {
-      return ffmpegInstance;
-    }
-
-    showProgress('Loading audio extraction library...');
-
-    try {
-      // Check if FFmpeg libraries are loaded
-      if (typeof FFmpegWASM === 'undefined') {
-        console.error('FFmpegWASM is undefined. Check if lib/ffmpeg/ffmpeg.js is loading.');
-        throw new Error('FFmpeg library not loaded. Please refresh the page and check the browser console.');
-      }
-
-      if (typeof FFmpegUtil === 'undefined') {
-        console.error('FFmpegUtil is undefined. Check if lib/ffmpeg/util.js is loading.');
-        throw new Error('FFmpeg util library not loaded. Please refresh the page and check the browser console.');
-      }
-
-      const { FFmpeg } = FFmpegWASM;
-      const { fetchFile, toBlobURL } = FFmpegUtil;
-
-      ffmpegInstance = new FFmpeg();
-
-      // Load FFmpeg core from local files
-      const baseURL = 'lib/ffmpeg';
-      await ffmpegInstance.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
-      });
-
-      ffmpegLoaded = true;
-      return ffmpegInstance;
-    } catch (error) {
-      console.error('Error loading FFmpeg:', error);
-      throw new Error('Failed to load audio extraction library: ' + error.message);
-    }
-  }
-
-  // Extract audio from video blob
+  // Extract audio from video using Web Audio API
   async function extractAudioFromVideo(videoBlob, progressCallback) {
     try {
-      const ffmpeg = await loadFFmpeg();
+      showProgress('Extracting audio from video...');
 
-      // Write video file to FFmpeg virtual filesystem
-      const videoData = new Uint8Array(await videoBlob.arrayBuffer());
-      await ffmpeg.writeFile('input.mp4', videoData);
+      // Create video element
+      const video = document.createElement('video');
+      const videoUrl = URL.createObjectURL(videoBlob);
+      video.src = videoUrl;
+      video.muted = true;
 
-      // Set up progress callback if provided
-      if (progressCallback) {
-        ffmpeg.on('progress', ({ progress }) => {
-          const percent = Math.round(progress * 100);
-          progressCallback(percent);
-        });
-      }
+      // Wait for video to load
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = resolve;
+        video.onerror = () => reject(new Error('Failed to load video'));
+      });
 
-      // Extract audio to MP3 with compression
-      // Start with 64k bitrate, mono, 16kHz (optimized for speech)
-      await ffmpeg.exec([
-        '-i', 'input.mp4',
-        '-vn', // No video
-        '-acodec', 'libmp3lame',
-        '-b:a', '64k', // Bitrate
-        '-ac', '1', // Mono
-        '-ar', '16000', // Sample rate 16kHz
-        'output.mp3'
-      ]);
+      // Create audio context
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaElementSource(video);
+      const dest = audioContext.createMediaStreamDestination();
+      source.connect(dest);
+      source.connect(audioContext.destination);
 
-      // Read the output file
-      const audioData = await ffmpeg.readFile('output.mp3');
-      const audioBlob = new Blob([audioData.buffer], { type: 'audio/mp3' });
+      // Create MediaRecorder to capture audio
+      const mediaRecorder = new MediaRecorder(dest.stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+
+      const chunks = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      // Start recording and play video
+      mediaRecorder.start();
+      video.play();
+
+      // Wait for video to finish
+      await new Promise((resolve) => {
+        video.onended = resolve;
+      });
+
+      // Stop recording
+      mediaRecorder.stop();
+
+      // Wait for final data
+      await new Promise((resolve) => {
+        mediaRecorder.onstop = resolve;
+      });
+
+      // Create audio blob
+      const audioBlob = new Blob(chunks, { type: 'audio/webm' });
 
       // Clean up
-      await ffmpeg.deleteFile('input.mp4');
-      await ffmpeg.deleteFile('output.mp3');
+      URL.revokeObjectURL(videoUrl);
+      video.remove();
 
-      // Check file size (Whisper API limit is 25MB)
+      // Check file size
       if (audioBlob.size > 25 * 1024 * 1024) {
-        // Try with lower bitrate
-        return await extractAudioWithLowerBitrate(videoBlob, progressCallback);
+        throw new Error('Audio file is too large (>25MB). Please use a shorter video.');
+      }
+
+      if (progressCallback) {
+        progressCallback(100);
       }
 
       return audioBlob;
     } catch (error) {
       console.error('Error extracting audio:', error);
       throw new Error('Failed to extract audio: ' + error.message);
-    }
-  }
-
-  // Extract audio with lower bitrate if file is too large
-  async function extractAudioWithLowerBitrate(videoBlob, progressCallback) {
-    try {
-      const ffmpeg = ffmpegInstance;
-
-      const videoData = new Uint8Array(await videoBlob.arrayBuffer());
-      await ffmpeg.writeFile('input.mp4', videoData);
-
-      // Try 32k bitrate
-      showProgress('File too large, compressing further...');
-      await ffmpeg.exec([
-        '-i', 'input.mp4',
-        '-vn',
-        '-acodec', 'libmp3lame',
-        '-b:a', '32k',
-        '-ac', '1',
-        '-ar', '16000',
-        'output.mp3'
-      ]);
-
-      const audioData = await ffmpeg.readFile('output.mp3');
-      const audioBlob = new Blob([audioData.buffer], { type: 'audio/mp3' });
-
-      await ffmpeg.deleteFile('input.mp4');
-      await ffmpeg.deleteFile('output.mp3');
-
-      if (audioBlob.size > 25 * 1024 * 1024) {
-        throw new Error('Audio file is too large even after compression. Please use a shorter video.');
-      }
-
-      return audioBlob;
-    } catch (error) {
-      console.error('Error extracting audio with lower bitrate:', error);
-      throw error;
     }
   }
 
@@ -278,14 +227,15 @@
       const videoBlob = await fetchVideoAsBlob(videoUrl);
       currentVideoBlob = videoBlob;
 
-      // Step 2: Check file size (Whisper API limit is 25MB)
-      if (videoBlob.size > 25 * 1024 * 1024) {
-        throw new Error('Video file is too large (>25MB). Please use a shorter video.');
-      }
+      // Step 2: Extract audio from video
+      showProgress('Extracting audio...', mode);
+      const audioBlob = await extractAudioFromVideo(videoBlob, (progress) => {
+        showProgress(`Extracting audio... ${progress}%`, mode);
+      });
 
-      // Step 3: Transcribe video directly (no audio extraction needed!)
-      showProgress('Transcribing video...', mode);
-      const result = await transcribeAudio(videoBlob, apiKey);
+      // Step 3: Transcribe audio
+      showProgress('Transcribing audio...', mode);
+      const result = await transcribeAudio(audioBlob, apiKey);
 
       // Step 4: Display results
       displayTranscriptionResults(result, videoBlob, mode);

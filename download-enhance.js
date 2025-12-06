@@ -106,14 +106,15 @@
 
           const videoBlob = await fetchVideoAsBlob(videoUrl);
 
-          // Check file size
-          if (videoBlob.size > 25 * 1024 * 1024) {
-            throw new Error('Video file is too large (>25MB). Please use a shorter video.');
-          }
+          // Extract audio
+          showDownloadModeProgress('Extracting audio...', mode);
+          const audioBlob = await WhisperAPI.extractAudioFromVideo(videoBlob, (progress) => {
+            showDownloadModeProgress(`Extracting audio... ${progress}%`, mode);
+          });
 
-          // Transcribe video directly (no audio extraction needed)
-          showDownloadModeProgress('Transcribing video...', mode);
-          const result = await WhisperAPI.transcribeAudio(videoBlob, apiKey);
+          // Transcribe audio
+          showDownloadModeProgress('Transcribing audio...', mode);
+          const result = await WhisperAPI.transcribeAudio(audioBlob, apiKey);
 
           // Display results
           displayDownloadModeResults(result, videoBlob);
