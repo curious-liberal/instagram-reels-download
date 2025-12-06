@@ -395,68 +395,6 @@
     }
   }
 
-  // Download all videos as ZIP
-  async function downloadAllVideosZip() {
-    if (processingQueue.length === 0) return;
-
-    try {
-      const zip = new JSZip();
-
-      for (let i = 0; i < processingQueue.length; i++) {
-        const item = processingQueue[i];
-        if (item.status !== 'completed') continue;
-
-        // Get fresh download URL
-        const response = await fetch('https://api.instasave.website/media', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({'url': item.url})
-        });
-
-        const responseText = await response.text();
-        let videoUrl;
-
-        try {
-          videoUrl = JSON.parse(responseText).download_url;
-        } catch (e) {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(responseText, 'text/html');
-          videoUrl = doc.querySelector('a.abutton.is-success')?.getAttribute('href');
-        }
-
-        if (!videoUrl) {
-          console.warn('Skipping video download for item: ', item.url);
-          continue;
-        }
-
-        const videoResp = await fetch(videoUrl);
-        if (!videoResp.ok) {
-          console.warn('Failed to fetch video for zip: ', item.url);
-          continue;
-        }
-        const blob = await videoResp.blob();
-
-        const filename = `instagram_video_${i + 1}.mp4`;
-        zip.file(filename, blob);
-      }
-
-      showMessage('info', 'Generating video ZIP file...');
-      const blob = await zip.generateAsync({ type: 'blob' });
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `instagram_videos_${Date.now()}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      showMessage('success', 'Video ZIP download started!');
-    } catch (error) {
-      console.error('Video ZIP error:', error);
-      showMessage('error', 'Failed to generate video ZIP');
-    }
-  }
-
   // Handle clear button
   function handleClear() {
     if (bulkUrlsInput) {
@@ -499,8 +437,7 @@
     downloadSrt: downloadSrt,
     downloadReel: downloadReel,
     copyAll: copyAllTranscripts,
-    downloadZip: downloadAllZip,
-    downloadVideosZip: downloadAllVideosZip
+    downloadZip: downloadAllZip
   };
 
   // Initialize on DOM ready
