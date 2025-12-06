@@ -9,9 +9,19 @@
 </head>
 <body>
     <header>
-        <div class="logo">
-            <i class="fab fa-instagram"></i>
-            <h1>InstaSave Pro</h1>
+        <div class="header-content">
+            <div class="logo">
+                <i class="fab fa-instagram"></i>
+                <h1>InstaSave Pro</h1>
+            </div>
+            <div class="header-actions">
+                <div id="apiKeyStatus" class="api-key-status not-configured">
+                    <i class="fas fa-exclamation-circle"></i> No API Key
+                </div>
+                <button id="settingsButton" class="icon-btn header-icon-btn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
         </div>
         <p class="tagline">Download Instagram videos in high quality with one click</p>
     </header>
@@ -80,8 +90,39 @@
         <p>This tool is not affiliated with Instagram.</p>
     </footer>
 
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> Settings</h2>
+                <button class="close-modal" id="closeSettings">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="apiKeyInput">
+                        <i class="fas fa-key"></i> OpenAI API Key
+                    </label>
+                    <input type="password" id="apiKeyInput" placeholder="sk-..." autocomplete="off">
+                    <small class="help-text">
+                        <i class="fas fa-info-circle"></i>
+                        Your API key is stored locally in your browser and only sent to OpenAI.
+                        Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>
+                    </small>
+                </div>
+                <div class="form-actions">
+                    <button class="btn" id="saveApiKey">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <button class="btn btn-secondary" id="clearApiKey">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://mrtusarrx.github.io/instagram-reels-download/fetch.js"></script>
     <script src="https://mrtusarrx.github.io/instagram-reels-download/flux.js"></script>
+    <script src="settings.js"></script>
 </body>
 </html>
