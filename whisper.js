@@ -27,11 +27,13 @@
     try {
       // Check if FFmpeg libraries are loaded
       if (typeof FFmpegWASM === 'undefined') {
-        throw new Error('FFmpeg library not loaded from CDN. Please refresh the page.');
+        console.error('FFmpegWASM is undefined. Check if lib/ffmpeg/ffmpeg.js is loading.');
+        throw new Error('FFmpeg library not loaded. Please refresh the page and check the browser console.');
       }
 
       if (typeof FFmpegUtil === 'undefined') {
-        throw new Error('FFmpeg util library not loaded from CDN. Please refresh the page.');
+        console.error('FFmpegUtil is undefined. Check if lib/ffmpeg/util.js is loading.');
+        throw new Error('FFmpeg util library not loaded. Please refresh the page and check the browser console.');
       }
 
       const { FFmpeg } = FFmpegWASM;
