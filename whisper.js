@@ -44,19 +44,29 @@
 
       // Create audio context
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Resume AudioContext (required in some browsers)
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+
       const source = audioContext.createMediaElementSource(video);
       const dest = audioContext.createMediaStreamDestination();
       source.connect(dest);
-      // Don't connect to destination to keep extraction silent
 
-      // Create MediaRecorder to capture audio
+      console.log('AudioContext state:', audioContext.state);
+      console.log('MediaStream tracks:', dest.stream.getAudioTracks().length);
+
+      // Create MediaRecorder to capture audio with timeslice for continuous chunks
       const mediaRecorder = new MediaRecorder(dest.stream, {
-        mimeType: 'audio/webm;codecs=opus'
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 128000
       });
 
       const chunks = [];
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
+          console.log('Received chunk:', e.data.size, 'bytes');
           chunks.push(e.data);
         }
       };
@@ -137,19 +147,29 @@
 
   // ==================== WHISPER API INTEGRATION ====================
 
-  // Transcribe audio using OpenAI Whisper API
-  async function transcribeAudio(audioBlob, apiKey) {
+  // Transcribe audio/video using OpenAI Whisper API
+  async function transcribeAudio(mediaBlob, apiKey) {
     try {
-      showProgress('Transcribing audio...');
+      showProgress('Transcribing...');
 
       // Validate API key
       if (!Settings || !Settings.validateApiKey(apiKey)) {
         throw new Error('Invalid API key');
       }
 
+      // Detect file extension from blob type
+      let extension = 'mp4';
+      if (mediaBlob.type.includes('webm')) {
+        extension = 'webm';
+      } else if (mediaBlob.type.includes('mp4')) {
+        extension = 'mp4';
+      } else if (mediaBlob.type.includes('mpeg')) {
+        extension = 'mpeg';
+      }
+
       // Create form data
       const formData = new FormData();
-      formData.append('file', audioBlob, 'audio.webm');
+      formData.append('file', mediaBlob, `video.${extension}`);
       formData.append('model', 'whisper-1');
       formData.append('response_format', 'verbose_json'); // Get timestamps
 
@@ -270,15 +290,9 @@
       const videoBlob = await fetchVideoAsBlob(videoUrl);
       currentVideoBlob = videoBlob;
 
-      // Step 2: Extract audio from video
-      showProgress('Extracting audio...', mode);
-      const audioBlob = await extractAudioFromVideo(videoBlob, (progress) => {
-        showProgress(`Extracting audio... ${progress}%`, mode);
-      });
-
-      // Step 3: Transcribe audio
-      showProgress('Transcribing audio...', mode);
-      const result = await transcribeAudio(audioBlob, apiKey);
+      // Step 2: Transcribe video directly (Whisper supports video files)
+      showProgress('Transcribing video...', mode);
+      const result = await transcribeAudio(videoBlob, apiKey);
 
       // Step 4: Display results
       displayTranscriptionResults(result, videoBlob, mode);
@@ -549,15 +563,9 @@
           showSpinner('transcribe');
           clearMessage('transcribe');
 
-          // Extract audio from uploaded file
-          showProgress('Extracting audio...', 'transcribe');
-          const audioBlob = await extractAudioFromVideo(file, (progress) => {
-            showProgress(`Extracting audio... ${progress}%`, 'transcribe');
-          });
-
-          // Transcribe audio
-          showProgress('Transcribing audio...', 'transcribe');
-          const result = await transcribeAudio(audioBlob, apiKey);
+          // Transcribe video file directly
+          showProgress('Transcribing video...', 'transcribe');
+          const result = await transcribeAudio(file, apiKey);
 
           // Display results
           displayTranscriptionResults(result, file, 'transcribe');
