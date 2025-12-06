@@ -705,6 +705,45 @@
   background: #5a6268;
 }
 
+/* File upload section */
+#fileUploadSection {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: #fff8e6;
+  border: 2px dashed var(--primary);
+  border-radius: 12px;
+}
+
+#fileUploadSection .info-text {
+  margin-bottom: 1rem;
+  color: var(--text-dark);
+}
+
+.file-input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  flex: 1;
+  cursor: pointer;
+  background: white;
+}
+
+.file-input::-webkit-file-upload-button {
+  padding: 8px 16px;
+  background: var(--gradient);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 10px;
+  font-weight: 600;
+}
+
+.file-input::-webkit-file-upload-button:hover {
+  opacity: 0.9;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .header-content {

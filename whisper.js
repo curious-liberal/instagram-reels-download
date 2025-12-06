@@ -258,12 +258,20 @@
   async function fetchVideoAsBlob(url) {
     try {
       // This assumes the video URL is from the api.instasave.website response
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch video');
       }
       return await response.blob();
     } catch (error) {
+      // CORS error - need alternative method
+      if (error.message.includes('CORS') || error.message.includes('cors') ||
+          error.message.includes('Cross-Origin') || error.name === 'TypeError') {
+        throw new Error('CORS_ERROR');
+      }
       throw new Error('Failed to download video: ' + error.message);
     }
   }
@@ -422,6 +430,95 @@
     URL.revokeObjectURL(url);
   }
 
+  // ==================== FILE UPLOAD HANDLING ====================
+
+  // Show file upload option when CORS blocks direct fetch
+  function showFileUploadOption(downloadUrl) {
+    const fileUploadSection = document.getElementById('fileUploadSection');
+    if (!fileUploadSection) return;
+
+    // Add download link
+    const responseDiv = document.getElementById('transcribeResponse');
+    if (responseDiv && downloadUrl) {
+      responseDiv.innerHTML += `
+        <div class="info-message" style="margin-top: 1rem;">
+          <a href="${downloadUrl}" download class="download-btn" style="display: inline-block; text-decoration: none;">
+            <i class="fas fa-download"></i> Download Video First
+          </a>
+        </div>
+      `;
+    }
+
+    // Show file upload section
+    fileUploadSection.style.display = 'block';
+  }
+
+  // Handle file upload transcription
+  function setupFileUpload() {
+    const fileInput = document.getElementById('videoFileInput');
+    const transcribeFileBtn = document.getElementById('transcribeFileButton');
+
+    if (fileInput && transcribeFileBtn) {
+      transcribeFileBtn.addEventListener('click', async function() {
+        const file = fileInput.files[0];
+        if (!file) {
+          showMessage('error', 'Please select a video file', 'transcribe');
+          return;
+        }
+
+        // Check if API key is configured
+        if (!Settings || !Settings.hasApiKey()) {
+          showMessage('error', 'Please configure your OpenAI API key in Settings', 'transcribe');
+          if (Settings && Settings.openSettings) {
+            Settings.openSettings();
+          }
+          return;
+        }
+
+        try {
+          const apiKey = Settings.getApiKey();
+
+          // Hide file upload section
+          const fileUploadSection = document.getElementById('fileUploadSection');
+          if (fileUploadSection) {
+            fileUploadSection.style.display = 'none';
+          }
+
+          // Show loading state
+          showSpinner('transcribe');
+          clearMessage('transcribe');
+
+          // Extract audio from uploaded file
+          showProgress('Extracting audio...', 'transcribe');
+          const audioBlob = await extractAudioFromVideo(file, (progress) => {
+            showProgress(`Extracting audio... ${progress}%`, 'transcribe');
+          });
+
+          // Transcribe audio
+          showProgress('Transcribing audio...', 'transcribe');
+          const result = await transcribeAudio(audioBlob, apiKey);
+
+          // Display results
+          displayTranscriptionResults(result, file, 'transcribe');
+
+          hideSpinner('transcribe');
+          showMessage('success', 'Transcription complete!', 'transcribe');
+
+        } catch (error) {
+          console.error('Transcription error:', error);
+          hideSpinner('transcribe');
+          showMessage('error', error.message || 'Transcription failed', 'transcribe');
+
+          // Show file upload section again
+          const fileUploadSection = document.getElementById('fileUploadSection');
+          if (fileUploadSection) {
+            fileUploadSection.style.display = 'block';
+          }
+        }
+      });
+    }
+  }
+
   // ==================== PUBLIC API ====================
 
   window.WhisperAPI = {
@@ -492,7 +589,14 @@
         } catch (error) {
           console.error('Error fetching video:', error);
           hideSpinner('transcribe');
-          showMessage('error', error.message || 'Failed to fetch video', 'transcribe');
+
+          // If CORS error, show file upload option with download link
+          if (error.message === 'Failed to download video: CORS_ERROR') {
+            showMessage('error', 'Cannot fetch video due to CORS restrictions.', 'transcribe');
+            showFileUploadOption(videoUrl);
+          } else {
+            showMessage('error', error.message || 'Failed to fetch video', 'transcribe');
+          }
         }
       });
     }
@@ -500,8 +604,12 @@
 
   // Setup button after DOM loads
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupTranscribeButton);
+    document.addEventListener('DOMContentLoaded', function() {
+      setupTranscribeButton();
+      setupFileUpload();
+    });
   } else {
     setupTranscribeButton();
+    setupFileUpload();
   }
 })();

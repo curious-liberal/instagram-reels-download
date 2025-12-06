@@ -97,6 +97,20 @@
 
                     <div class="spinner" id="transcribeSpinner"></div>
                     <div id="transcribeResponse"></div>
+
+                    <!-- File upload fallback for CORS issues -->
+                    <div id="fileUploadSection" style="display: none;">
+                        <p class="info-text">
+                            <i class="fas fa-info-circle"></i>
+                            Due to CORS restrictions, please download the video first and then upload it here:
+                        </p>
+                        <div class="input-group">
+                            <input type="file" id="videoFileInput" accept="video/*" class="file-input">
+                            <button id="transcribeFileButton" class="btn">
+                                <i class="fas fa-closed-captioning"></i> Transcribe Uploaded Video
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="transcription-result-section" id="transcriptionResultSection">
