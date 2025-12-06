@@ -25,11 +25,20 @@
       const video = document.createElement('video');
       const videoUrl = URL.createObjectURL(videoBlob);
       video.src = videoUrl;
-      video.muted = true;
+      video.volume = 0; // Silent playback instead of muted
+      video.playbackRate = 1.0; // Ensure normal speed
 
       // Wait for video to load
       await new Promise((resolve, reject) => {
-        video.onloadedmetadata = resolve;
+        video.onloadedmetadata = () => {
+          console.log('Video loaded:', {
+            duration: video.duration,
+            hasAudio: video.mozHasAudio || video.webkitAudioDecodedByteCount > 0,
+            videoWidth: video.videoWidth,
+            videoHeight: video.videoHeight
+          });
+          resolve();
+        };
         video.onerror = () => reject(new Error('Failed to load video'));
       });
 
@@ -94,9 +103,21 @@
       // Create audio blob
       const audioBlob = new Blob(chunks, { type: 'audio/webm' });
 
+      console.log('Audio extraction complete:', {
+        audioBlobSize: audioBlob.size,
+        audioBlobType: audioBlob.type,
+        chunksCount: chunks.length,
+        videoDuration: video.duration
+      });
+
       // Clean up
       URL.revokeObjectURL(videoUrl);
       video.remove();
+
+      // Check if audio was actually captured
+      if (audioBlob.size === 0 || audioBlob.size < 1000) {
+        throw new Error('No audio was captured from the video. The video may not contain audio.');
+      }
 
       // Check file size
       if (audioBlob.size > 25 * 1024 * 1024) {
@@ -372,6 +393,9 @@
       </div>
 
       <div class="transcript-actions">
+        <button class="download-btn" onclick="WhisperAPI.copyTranscript()">
+          <i class="fas fa-copy"></i> Copy to Clipboard
+        </button>
         <button class="download-btn" onclick="WhisperAPI.downloadTranscript('txt')">
           <i class="fas fa-file-alt"></i> Download TXT
         </button>
@@ -407,6 +431,25 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML.replace(/\n/g, '<br>');
+  }
+
+  // Copy transcript to clipboard
+  function copyTranscript() {
+    const result = window._transcriptionResult;
+    if (!result) return;
+
+    navigator.clipboard.writeText(result.text).then(() => {
+      // Show brief success message
+      const btn = event.target.closest('button');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy to clipboard');
+    });
   }
 
   // Download transcript
@@ -541,6 +584,7 @@
 
   window.WhisperAPI = {
     transcribeVideo: transcribeVideo,
+    copyTranscript: copyTranscript,
     downloadTranscript: downloadTranscript,
     downloadVideo: downloadVideo,
     extractAudioFromVideo: extractAudioFromVideo,
