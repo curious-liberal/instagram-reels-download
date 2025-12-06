@@ -99,23 +99,24 @@
     const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
 
     if (!apiKey) {
-      showMessage('error', 'Please enter an API key');
+      showModalMessage('error', 'Please enter an API key');
       return;
     }
 
     if (!validateApiKey(apiKey)) {
-      showMessage('error', 'Invalid API key format. OpenAI API keys start with "sk-"');
+      showModalMessage('error', 'Invalid API key format. OpenAI API keys should start with "sk-" and be at least 20 characters');
       return;
     }
 
     try {
       localStorage.setItem(STORAGE_KEY, apiKey);
-      showMessage('success', 'API key saved successfully');
+      showModalMessage('success', 'API key saved successfully');
       updateApiKeyStatus();
-      closeSettingsModal();
+      // Close modal after a brief delay so user sees success message
+      setTimeout(closeSettingsModal, 800);
     } catch (error) {
       console.error('Error saving API key:', error);
-      showMessage('error', 'Failed to save API key');
+      showModalMessage('error', 'Failed to save API key');
     }
   }
 
@@ -126,24 +127,24 @@
       if (apiKeyInput) {
         apiKeyInput.value = '';
       }
-      showMessage('success', 'API key cleared');
+      showModalMessage('success', 'API key cleared');
       updateApiKeyStatus();
     } catch (error) {
       console.error('Error clearing API key:', error);
-      showMessage('error', 'Failed to clear API key');
+      showModalMessage('error', 'Failed to clear API key');
     }
   }
 
   // Validate API key format
   function validateApiKey(key) {
-    // OpenAI API keys start with "sk-" and are at least 20 characters
+    // OpenAI API keys start with "sk-" or "sk-proj-" and are at least 20 characters
     if (!key.startsWith('sk-')) {
       return false;
     }
-    if (key.length < 20 || key.length > 100) {
+    if (key.length < 20 || key.length > 200) {
       return false;
     }
-    // Should only contain alphanumeric characters and hyphens
+    // Should only contain alphanumeric characters, hyphens, and underscores
     if (!/^sk-[a-zA-Z0-9\-_]+$/.test(key)) {
       return false;
     }
@@ -162,6 +163,29 @@
         apiKeyStatus.className = 'api-key-status not-configured';
       }
     }
+  }
+
+  // Show message in modal
+  function showModalMessage(type, message) {
+    // Create or get message container in modal
+    let messageDiv = document.getElementById('settingsMessage');
+    if (!messageDiv) {
+      messageDiv = document.createElement('div');
+      messageDiv.id = 'settingsMessage';
+      const modalBody = document.querySelector('.modal-body');
+      if (modalBody) {
+        modalBody.insertBefore(messageDiv, modalBody.firstChild);
+      }
+    }
+
+    const className = type === 'error' ? 'error-message' :
+                     type === 'success' ? 'success-message' : 'info-message';
+    messageDiv.innerHTML = '<div class="' + className + '" style="margin-bottom: 1rem;">' + message + '</div>';
+
+    // Auto-clear after 3 seconds
+    setTimeout(function() {
+      messageDiv.innerHTML = '';
+    }, 3000);
   }
 
   // Show message (uses existing message system if available)
