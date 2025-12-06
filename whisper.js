@@ -106,7 +106,7 @@
 
       // Create form data
       const formData = new FormData();
-      formData.append('file', audioBlob, 'audio.mp3');
+      formData.append('file', audioBlob, 'audio.webm');
       formData.append('model', 'whisper-1');
       formData.append('response_format', 'verbose_json'); // Get timestamps
 
