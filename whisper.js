@@ -497,6 +497,12 @@
           return;
         }
 
+        // Validate Instagram URL format
+        if (!url.includes('instagram.com')) {
+          showMessage('error', 'Please enter a valid Instagram URL', 'transcribe');
+          return;
+        }
+
         // First fetch the video metadata from api.instasave.website
         try {
           showSpinner('transcribe');
@@ -511,14 +517,17 @@
           });
 
           if (!response.ok) {
-            throw new Error('Failed to fetch video information');
+            const errorText = await response.text();
+            console.error('API error response:', errorText);
+            throw new Error('Failed to fetch video information. The Instagram URL may be invalid or the video may be private.');
           }
 
           const data = await response.json();
           const videoUrl = data.download_url;
 
           if (!videoUrl) {
-            throw new Error('Could not get video download URL');
+            console.error('API response:', data);
+            throw new Error('Could not get video download URL from API response');
           }
 
           // Now transcribe using the video URL
