@@ -27,32 +27,93 @@
     </header>
     
     <main>
-        <div class="container">
-            <div class="input-section">
-                <h2>Paste Instagram Video URL</h2>
-                <div class="input-group">
-                    <div class="input-wrapper">
-                        <input type="text" id="instagramReelUrl" placeholder="Your video url...">
-                        <button id="pasteButton" class="icon-btn" title="Paste link">
-                            <i class="fas fa-paste"></i>
-                        </button>
-                        <button id="clearButton" class="icon-btn hidden" title="Clear">
-                            <i class="fas fa-times"></i>
+        <!-- Tab Navigation -->
+        <div class="tabs-container">
+            <div class="tabs">
+                <button id="downloadTab" class="tab active">
+                    <i class="fas fa-download"></i> Download
+                </button>
+                <button id="transcribeTab" class="tab">
+                    <i class="fas fa-closed-captioning"></i> Transcribe
+                </button>
+                <button id="bulkTab" class="tab" disabled title="Coming in Phase 2">
+                    <i class="fas fa-list"></i> Bulk
+                </button>
+            </div>
+        </div>
+
+        <!-- Download Mode Section -->
+        <div id="downloadSection" class="mode-section">
+            <div class="container">
+                <div class="input-section">
+                    <h2>Paste Instagram Video URL</h2>
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <input type="text" id="instagramReelUrl" placeholder="Your video url...">
+                            <button id="pasteButton" class="icon-btn" title="Paste link">
+                                <i class="fas fa-paste"></i>
+                            </button>
+                            <button id="clearButton" class="icon-btn hidden" title="Clear">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <button id="fetchButton" class="btn">
+                            <i class="fas fa-download"></i> Download
                         </button>
                     </div>
-                    <button id="fetchButton" class="btn">
-                        <i class="fas fa-download"></i> Download
-                    </button>
+
+                    <div class="spinner" id="spinner"></div>
+                    <div id="response"></div>
                 </div>
 
-                <div class="spinner" id="spinner"></div>
-                <div id="response"></div>
+                <div class="result-section" id="resultSection">
+                    <div class="media-container">
+                        <img src="" alt="Video Thumbnail" class="thumbnail" id="thumbnail">
+                        <div class="download-options" id="downloadOptions"></div>
+                    </div>
+                </div>
             </div>
-            
-            <div class="result-section" id="resultSection">
-                <div class="media-container">
-                    <img src="" alt="Video Thumbnail" class="thumbnail" id="thumbnail">
-                    <div class="download-options" id="downloadOptions"></div>
+        </div>
+
+        <!-- Transcribe Mode Section -->
+        <div id="transcribeSection" class="mode-section" style="display: none;">
+            <div class="container">
+                <div class="input-section">
+                    <h2>Transcribe Instagram Video</h2>
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <input type="text" id="transcribeReelUrl" placeholder="Paste Instagram video url...">
+                            <button id="pasteTranscribeButton" class="icon-btn" title="Paste link">
+                                <i class="fas fa-paste"></i>
+                            </button>
+                            <button id="clearTranscribeButton" class="icon-btn hidden" title="Clear">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <button id="transcribeButton" class="btn">
+                            <i class="fas fa-closed-captioning"></i> Transcribe
+                        </button>
+                    </div>
+
+                    <div class="spinner" id="transcribeSpinner"></div>
+                    <div id="transcribeResponse"></div>
+                </div>
+
+                <div class="transcription-result-section" id="transcriptionResultSection">
+                    <!-- Transcription results will be displayed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Mode Section (Phase 2) -->
+        <div id="bulkSection" class="mode-section" style="display: none;">
+            <div class="container">
+                <div class="input-section">
+                    <h2>Bulk Transcription</h2>
+                    <p class="info-text">
+                        <i class="fas fa-info-circle"></i>
+                        Coming in Phase 2: Process multiple Instagram videos at once
+                    </p>
                 </div>
             </div>
         </div>
@@ -124,5 +185,6 @@
     <script src="https://mrtusarrx.github.io/instagram-reels-download/fetch.js"></script>
     <script src="https://mrtusarrx.github.io/instagram-reels-download/flux.js"></script>
     <script src="settings.js"></script>
+    <script src="tabs.js"></script>
 </body>
 </html>
