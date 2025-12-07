@@ -110,10 +110,18 @@
                     <div id="fileUploadSection">
                         <p class="info-text">
                             <i class="fas fa-info-circle"></i>
-                            Or upload media from your device (video or audio) to transcribe directly:
+                            Upload media from your device (video or audio, up to 25MB) to transcribe directly:
                         </p>
-                        <div class="input-group">
-                            <input type="file" id="videoFileInput" accept="video/*,audio/*" class="file-input">
+                        <div id="uploadDropzone" class="upload-dropzone">
+                            <input type="file" id="videoFileInput" accept="video/*,audio/*" class="file-input" aria-label="Upload media">
+                            <div class="upload-dropzone-inner">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <p class="upload-text"><strong>Click to browse</strong> or drag & drop media</p>
+                                <p class="upload-subtext">MP4, MOV, WEBM, MP3, WAV (max 25MB)</p>
+                            </div>
+                        </div>
+                        <div class="upload-selected" id="uploadSelectedText"></div>
+                        <div class="upload-actions">
                             <button id="transcribeFileButton" class="btn">
                                 <i class="fas fa-closed-captioning"></i> Transcribe Uploaded Media
                             </button>

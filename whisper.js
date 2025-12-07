@@ -556,51 +556,105 @@
   function setupFileUpload() {
     const fileInput = document.getElementById('videoFileInput');
     const transcribeFileBtn = document.getElementById('transcribeFileButton');
+    const uploadDropzone = document.getElementById('uploadDropzone');
+    const uploadSelectedText = document.getElementById('uploadSelectedText');
 
     if (fileInput && transcribeFileBtn) {
+      // Click on dropzone triggers file input
+      if (uploadDropzone) {
+        uploadDropzone.addEventListener('click', () => fileInput.click());
+
+        uploadDropzone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          uploadDropzone.classList.add('dragover');
+        });
+        uploadDropzone.addEventListener('dragleave', () => {
+          uploadDropzone.classList.remove('dragover');
+        });
+        uploadDropzone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          uploadDropzone.classList.remove('dragover');
+          const file = e.dataTransfer.files[0];
+          if (file) {
+            handleFileSelected(file);
+          }
+        });
+      }
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (file) {
+          handleFileSelected(file);
+        }
+      });
+
       transcribeFileBtn.addEventListener('click', async function() {
         const file = fileInput.files[0];
         if (!file) {
-          showMessage('error', 'Please select a video file', 'transcribe');
+          showMessage('error', 'Please select a media file', 'transcribe');
           return;
         }
-
-        // Check if API key is configured
-        if (!Settings || !Settings.hasApiKey()) {
-          showMessage('error', 'Please configure your OpenAI API key in Settings', 'transcribe');
-          if (Settings && Settings.openSettings) {
-            Settings.openSettings();
-          }
-          return;
-        }
-
-        try {
-          const apiKey = Settings.getApiKey();
-
-          transcribeFileBtn.disabled = true;
-
-          // Show loading state
-          showSpinner('transcribe');
-          clearMessage('transcribe');
-
-          // Transcribe video file directly
-          showProgress('Transcribing video...', 'transcribe');
-          const result = await transcribeAudio(file, apiKey);
-
-          // Display results
-          displayTranscriptionResults(result, file, 'transcribe');
-
-          hideSpinner('transcribe');
-          showMessage('success', 'Transcription complete!', 'transcribe');
-          transcribeFileBtn.disabled = false;
-
-        } catch (error) {
-          console.error('Transcription error:', error);
-          hideSpinner('transcribe');
-          showMessage('error', error.message || 'Transcription failed', 'transcribe');
-          transcribeFileBtn.disabled = false;
-        }
+        await transcribeSelectedFile(file, transcribeFileBtn);
       });
+    }
+
+    function handleFileSelected(file) {
+      if (!file) return;
+      const maxSize = 25 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showMessage('error', 'File is larger than 25MB limit', 'transcribe');
+        return;
+      }
+      fileInput.files = createFileList(file);
+      if (uploadSelectedText) {
+        uploadSelectedText.style.display = 'block';
+        uploadSelectedText.innerHTML = `<strong>Selected:</strong> ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+      }
+    }
+
+    // helper to set FileList programmatically
+    function createFileList(file) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      return dataTransfer.files;
+    }
+
+    async function transcribeSelectedFile(file, buttonEl) {
+      // Check if API key is configured
+      if (!Settings || !Settings.hasApiKey()) {
+        showMessage('error', 'Please configure your OpenAI API key in Settings', 'transcribe');
+        if (Settings && Settings.openSettings) {
+          Settings.openSettings();
+        }
+        return;
+      }
+
+      try {
+        const apiKey = Settings.getApiKey();
+
+        if (buttonEl) buttonEl.disabled = true;
+
+        // Show loading state
+        showSpinner('transcribe');
+        clearMessage('transcribe');
+
+        // Transcribe video file directly
+        showProgress('Transcribing media...', 'transcribe');
+        const result = await transcribeAudio(file, apiKey);
+
+        // Display results
+        displayTranscriptionResults(result, file, 'transcribe');
+
+        hideSpinner('transcribe');
+        showMessage('success', 'Transcription complete!', 'transcribe');
+
+      } catch (error) {
+        console.error('Transcription error:', error);
+        hideSpinner('transcribe');
+        showMessage('error', error.message || 'Transcription failed', 'transcribe');
+      } finally {
+        if (buttonEl) buttonEl.disabled = false;
+      }
     }
   }
 
